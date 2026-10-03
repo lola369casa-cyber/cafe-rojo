@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Café Rojo
 
-## Getting Started
-
-First, run the development server:
+Premium Colombian coffee — e-commerce site.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Supabase (PostgreSQL + auth) · Stripe · Resend.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The site runs with no keys at all: the shop uses the built-in starter catalog, the cart works,
+and `/admin` opens in a read-only preview on sample data. Checkout, accounts, email sign-up and
+the contact form each say plainly that they are not connected yet. Add keys to switch them on.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Going live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` and fill it in.
 
-## Learn More
+1. **Database (Supabase)** — create a project, run `supabase/schema.sql` in the SQL editor, and add
+   the URL, anon key and service-role key. Put your email in `ADMIN_EMAILS`, create an account at
+   `/account`, then open `/admin/products` and choose **Load Starter Catalog**.
+2. **Google login (optional)** — enable the Google provider in Supabase → Authentication, and add
+   `<site>/auth/callback` to the allowed redirect URLs.
+3. **Payments (Stripe)** — add `STRIPE_SECRET_KEY` (test key first). Create a webhook pointing to
+   `<site>/api/stripe/webhook` for `checkout.session.completed`, `invoice.paid`,
+   `customer.subscription.updated` and `customer.subscription.deleted`, and add its signing secret.
+   Enable the Customer Portal in Stripe so customers can manage subscriptions and cards. Apple Pay
+   and Google Pay appear automatically on Stripe's payment page. For sales tax, enable Stripe Tax and
+   set `STRIPE_AUTOMATIC_TAX=true`.
+4. **Email (Resend)** — add `RESEND_API_KEY`, a verified `EMAIL_FROM`, and `CONTACT_TO`. Password-reset
+   and confirmation emails are sent by Supabase Auth (customise them in Supabase → Auth → Templates).
+5. **Voice guide (Retell)** — the checkout page offers a call from an AI coffee guide. Add `RETELL_API_KEY`
+   and `RETELL_FROM_NUMBER`, create the agent from `retell/agent-prompt.md`, and bind it to that number for
+   outbound calls (or set `RETELL_AGENT_ID`).
+6. **Deploy** — set the same variables on the host and set `NEXT_PUBLIC_SITE_URL` to the live URL.
 
-To learn more about Next.js, take a look at the following resources:
+Card details never touch this app: payment happens on Stripe's hosted page.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Before launch — placeholders to replace
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Prices** other than Dark Roast 12 oz ($24.99), the **$50 free-shipping threshold**, the
+  **$6.95 flat rate**, the **10% subscriber saving** — `src/lib/catalog.ts`, `src/lib/site.ts`.
+- **Mountain Reserve and Decaf** roast levels, tasting notes and descriptions — confirm or edit.
+- **Process / variety / altitude / region** are blank for every coffee and hidden until filled in
+  (Admin → Products). Add them only once verified for the lot.
+- **Reviews** on the home page are marked sample content — `src/lib/sample.ts`.
+- **Social links** — `src/lib/site.ts`. **Policies** (shipping, returns, privacy, terms) are draft templates.
+- **Product photos** — until uploaded in Admin → Products, products show the label on an illustrated bag.
 
-## Deploy on Vercel
+## Images
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`reference/` holds the original label and the cleaned sources. The hero is the label artwork with the
+two subtitle lines removed; the wide desktop version was extended left and right with Adobe generative
+expand. Story photography is stills from the "From Seed to Soul" film clips.

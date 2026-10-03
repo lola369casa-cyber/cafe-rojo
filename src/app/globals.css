@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-burgundy: #6e1423;
+  --color-burgundy-deep: #4a0d18;
+  --color-forest: #1f3d2b;
+  --color-forest-deep: #14281c;
+  --color-cream: #f7f1e5;
+  --color-paper: #fcf9f3;
+  --color-sand: #e6dbc6;
+  --color-coffee: #4b3325;
+  --color-ink: #2a1f1a;
+  --color-muted: #75675b;
+  --color-gold: #b8935a;
+  --color-gold-light: #d9c08f;
+
+  --font-serif: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-jost), system-ui, -apple-system, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+::selection {
+  background: var(--color-burgundy);
+  color: var(--color-cream);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-[1320px] px-5 sm:px-8 lg:px-12;
+  }
+  .eyebrow {
+    @apply font-sans text-[0.72rem] font-medium uppercase tracking-[0.28em] text-gold;
+  }
+  .display {
+    @apply font-serif font-medium leading-[1.05] tracking-[-0.01em];
+  }
+  .h2 {
+    @apply font-serif text-[2.4rem] font-medium leading-[1.08] tracking-[-0.01em] sm:text-5xl lg:text-[3.5rem];
+  }
+  .lede {
+    @apply text-[1.075rem] leading-[1.8] text-muted;
+  }
+  .btn {
+    @apply inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 border px-7 py-3 text-[0.74rem] font-medium uppercase tracking-[0.22em] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-burgundy bg-burgundy text-cream hover:border-burgundy-deep hover:bg-burgundy-deep;
+  }
+  .btn-forest {
+    @apply border-forest bg-forest text-cream hover:border-forest-deep hover:bg-forest-deep;
+  }
+  .btn-outline {
+    @apply border-ink/70 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-cream;
+  }
+  .btn-light {
+    @apply border-cream/80 bg-transparent text-cream hover:bg-cream hover:text-ink;
+  }
+  .btn-gold {
+    @apply border-gold bg-gold text-forest-deep hover:border-gold-light hover:bg-gold-light;
+  }
+  .gold-rule {
+    @apply h-px w-16 bg-gold;
+  }
+  .field {
+    @apply w-full border border-sand bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-gold focus:outline-none;
+  }
+  .label {
+    @apply mb-1.5 block text-[0.7rem] font-medium uppercase tracking-[0.18em] text-muted;
+  }
+  .link-underline {
+    @apply border-b border-gold pb-0.5 text-[0.74rem] font-medium uppercase tracking-[0.22em] transition-colors hover:border-burgundy hover:text-burgundy;
+  }
+}
+
+/* Gentle fade-in on scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page-in {
+  animation: page-in 0.5s ease both;
+}
+
+@keyframes bump {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+}
+.bump {
+  animation: bump 0.4s ease;
+}
+
+.prose-cr p {
+  margin: 0 0 1.25rem;
+  color: var(--color-coffee);
+}
+.prose-cr h2 {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  line-height: 1.15;
+  margin: 2.5rem 0 0.75rem;
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .page-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
 }
