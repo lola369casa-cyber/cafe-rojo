@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { emails } from "@/lib/email";
 import { hasResend, hasSupabase } from "@/lib/site";
+import { hasLeadSheet, sendLead } from "@/lib/leads";
 import { adminClient } from "@/lib/supabase";
 
 const schema = z.object({
@@ -20,17 +21,17 @@ export async function POST(req: Request) {
 
   const canStore = hasSupabase && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const canEmail = hasResend && !!process.env.CONTACT_TO;
-  if (!canStore && !canEmail) {
+  if (!canStore && !canEmail && !hasLeadSheet) {
     return NextResponse.json({ error: "The contact form isn’t connected yet. Please check back soon." }, { status: 503 });
   }
-  try {
-    if (canStore) {
-      const { error } = await adminClient().from("contact_messages").insert(msg);
-      if (error) throw error;
-    }
-    if (canEmail) await emails.contact(msg);
-  } catch (e) {
-    console.error("[contact]", e);
+  // Delivered to every destination that is connected; succeeds if at least one took it.
+  const results = await Promise.allSettled([
+    canStore ? adminClient().from("contact_messages").insert(msg).then(({ error }) => { if (error) throw error; }) : Promise.reject("skip"),
+    canEmail ? emails.contact(msg) : Promise.reject("skip"),
+    hasLeadSheet ? sendLead({ type: "contact", source: "contact page", ...msg }) : Promise.reject("skip"),
+  ]);
+  results.forEach((r) => r.status === "rejected" && r.reason !== "skip" && console.error("[contact]", r.reason));
+  if (!results.some((r) => r.status === "fulfilled")) {
     return NextResponse.json({ error: "We couldn’t send your message. Please try again." }, { status: 500 });
   }
   return NextResponse.json(ok);

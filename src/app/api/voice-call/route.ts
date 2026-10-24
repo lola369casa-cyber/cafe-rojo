@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findVariant } from "@/lib/data";
+import { hasLeadSheet, sendLead } from "@/lib/leads";
 import { FLAT_SHIPPING_CENTS, FREE_SHIPPING_CENTS, money } from "@/lib/site";
 
 const schema = z.object({
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
   if (!to) return NextResponse.json({ error: "Please enter a valid 10-digit US phone number." }, { status: 400 });
 
   const { RETELL_API_KEY, RETELL_FROM_NUMBER, RETELL_AGENT_ID } = process.env;
-  if (!RETELL_API_KEY || !RETELL_FROM_NUMBER) {
+  const direct = Boolean(RETELL_API_KEY && RETELL_FROM_NUMBER);
+  if (!hasLeadSheet && !direct) {
     return NextResponse.json({ error: "Our coffee guide isn’t taking calls yet. Please check back soon." }, { status: 503 });
   }
 
@@ -57,6 +59,36 @@ export async function POST(req: Request) {
 
   const viewing = parsed.data.viewing ? await findVariant(parsed.data.viewing) : null;
 
+  const dynamicVariables = {
+    customer_name: parsed.data.name,
+    viewing_product: viewing ? `${viewing.product.subtitle}, ${viewing.variant.size}, ${money(viewing.variant.priceCents)}` : "None — they called from the checkout page.",
+    cart_summary: lines.length ? lines.join("; ") : "The cart is empty.",
+    free_shipping_threshold: money(FREE_SHIPPING_CENTS),
+    flat_shipping_rate: money(FLAT_SHIPPING_CENTS),
+  };
+
+  // Preferred route: the n8n leads workflow logs the request to the sheet first, then places the call.
+  if (hasLeadSheet) {
+    try {
+      const result = await sendLead({
+        type: "call_request",
+        source: `${parsed.data.source} page`,
+        name: parsed.data.name,
+        phone: to,
+        consent: true,
+        product_viewed: viewing ? dynamicVariables.viewing_product : "",
+        cart: lines.join("; "),
+        dynamic_variables: dynamicVariables,
+      });
+      if (result.status === "calling") return NextResponse.json({ message: "Your phone should ring within a minute." });
+      // Saved for a person to return — either no caller number is set yet, or the call could not be placed.
+      return NextResponse.json({ message: "Thank you — we’ve got your number and will call you back shortly." });
+    } catch (e) {
+      console.error("[voice-call] lead sheet", e);
+      if (!direct) return NextResponse.json({ error: "We couldn’t take your request just now. Please try again in a moment." }, { status: 502 });
+    }
+  }
+
   const res = await fetch("https://api.retellai.com/v2/create-phone-call", {
     method: "POST",
     headers: { Authorization: `Bearer ${RETELL_API_KEY}`, "Content-Type": "application/json" },
@@ -65,13 +97,7 @@ export async function POST(req: Request) {
       to_number: to,
       ...(RETELL_AGENT_ID ? { override_agent_id: RETELL_AGENT_ID } : {}),
       metadata: { source: parsed.data.source },
-      retell_llm_dynamic_variables: {
-        customer_name: parsed.data.name,
-        viewing_product: viewing ? `${viewing.product.subtitle}, ${viewing.variant.size}, ${money(viewing.variant.priceCents)}` : "None — they called from the checkout page.",
-        cart_summary: lines.length ? lines.join("; ") : "The cart is empty.",
-        free_shipping_threshold: money(FREE_SHIPPING_CENTS),
-        flat_shipping_rate: money(FLAT_SHIPPING_CENTS),
-      },
+      retell_llm_dynamic_variables: dynamicVariables,
     }),
   });
   if (!res.ok) {

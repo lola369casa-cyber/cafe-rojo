@@ -36,6 +36,21 @@ Copy `.env.example` to `.env.local` and fill it in.
 
 Card details never touch this app: payment happens on Stripe's hosted page.
 
+## Lead capture (Google Sheets)
+
+Newsletter sign-ups, contact messages and "call me" requests are logged to the Google Sheet
+**Café Rojo — Website Leads** through the n8n workflow **Café Rojo — Website Leads** (`eTQoqO5kvyfUcywF`).
+The site calls it server-side with `N8N_LEADS_WEBHOOK_URL` and `N8N_LEADS_KEY`; requests without the key
+get a 401 and nothing is written. Every lead is written before anything else happens.
+
+- **Call requests:** the workflow places the coffee guide call itself, using the Retell connection in n8n.
+  Until a caller number is set in the workflow's **Check Key** node (`CALLER`), call requests are saved with
+  Follow-up Status "Call back" and the visitor is told a person will call them back.
+- **After a call:** Retell posts its analysis to `/webhook/cafe-rojo-call-callback`, which fills Call Status,
+  Duration, Sentiment, Summary, Call Script (transcript) and Recording URL onto the same row by Call ID.
+- **Columns:** the Sheets nodes carry fixed column lists. Renaming or adding a header means updating the
+  matching nodes in n8n too, or the node fails with "Missing columns".
+
 ## Before launch — placeholders to replace
 
 - **Prices** other than Dark Roast 12 oz ($24.99), the **$50 free-shipping threshold**, the
